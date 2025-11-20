@@ -58,8 +58,9 @@ app.get('/', (req, res) => {
   });
 });
 
-// API Routes will be added here
-// app.use('/api/candidates', candidateRoutes);
+// API Routes
+import candidateRoutes from './routes/candidateRoutes';
+app.use('/api/candidates', candidateRoutes);
 
 // Global error handling middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
