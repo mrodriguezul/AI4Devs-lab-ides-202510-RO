@@ -1,9 +1,21 @@
+import path from 'path';
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded when this module is imported
+dotenv.config();
+
+const defaultBasePath = process.platform === 'win32'
+  ? 'D:/tmp/ats-files'
+  : path.resolve(process.cwd(), 'storage');
+
+const baseUploadPath = process.env.FILE_STORAGE_PATH || defaultBasePath;
+
 // File upload configuration for ATS system
 export const fileUploadConfig = {
   // Storage paths
-  uploadDirectory: 'D:/tmp/ats-files',
-  cvStoragePath: 'D:/tmp/ats-files/cvs',
-  tempStoragePath: 'D:/tmp/ats-files/temp',
+  uploadDirectory: baseUploadPath,
+  cvStoragePath: path.join(baseUploadPath, 'cvs'),
+  tempStoragePath: path.join(baseUploadPath, 'temp'),
   
   // File size limits (in bytes)
   maxFileSize: 10 * 1024 * 1024, // 10MB
