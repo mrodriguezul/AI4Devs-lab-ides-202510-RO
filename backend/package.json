@@ -6,11 +6,16 @@
     "scripts": {
         "start": "node dist/index.js",
         "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+        "dev:local": "cp .env.local .env && npm run dev",
+        "dev:docker": "cp .env.docker .env && npm run dev",
         "build": "tsc",
         "test": "jest",
         "prisma:init": "npx prisma init",
         "prisma:generate": "npx prisma generate",
-        "start:prod": "npm run build && npm start"
+        "start:prod": "npm run build && npm start",
+        "docker:up": "docker compose up --build -d",
+        "docker:down": "docker compose down",
+        "docker:logs": "docker compose logs -f backend"
     },
     "keywords": [],
     "author": "",

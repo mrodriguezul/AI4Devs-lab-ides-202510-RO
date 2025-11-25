@@ -10,7 +10,8 @@ COPY tsconfig.json ./tsconfig.json
 COPY prisma ./prisma
 COPY src ./src
 
-ENV DATABASE_URL="postgresql://LTIdbUser:D1ymf8wyQEGthFR1E9xhCq@localhost:5432/LTIdb"
+# Use db service name for Docker network
+ENV DATABASE_URL="postgresql://LTIdbUser:D1ymf8wyQEGthFR1E9xhCq@db:5432/LTIdb"
 RUN npx prisma generate
 RUN npm run build
 
