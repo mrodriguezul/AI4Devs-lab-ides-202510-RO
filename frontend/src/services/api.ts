@@ -6,8 +6,7 @@ import {
   Candidate, 
   CreateCandidateRequest, 
   ApiResponse, 
-  PaginatedResponse,
-  ApiError 
+  PaginatedResponse
 } from '../types/api';
 
 // Configure axios instance

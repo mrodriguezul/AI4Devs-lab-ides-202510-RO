@@ -76,7 +76,7 @@ export interface PaginatedResponse<T> {
   success: boolean;
   data: T[];
   message: string;
-  pagination: {
+  meta: {
     page: number;
     limit: number;
     total: number;

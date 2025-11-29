@@ -2,10 +2,7 @@ import React from 'react';
 import { ToastContainer } from 'react-toastify';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import Container from '@mui/material/Container';
-import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import TestAPI from './components/TestAPI';
+import CandidateDashboard from './components/CandidateDashboard';
 import { APP_CONFIG } from './types/api';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
@@ -13,10 +10,39 @@ import './App.css';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#2563eb',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#dc2626',
+    },
+    background: {
+      default: '#f8fafc',
+    },
+  },
+  typography: {
+    h3: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 500,
+    },
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+          borderRadius: '8px',
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 500,
+        },
+      },
     },
   },
 });
@@ -25,32 +51,23 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Container maxWidth="lg">
-        <Box sx={{ my: 4 }}>
-          <Typography variant="h3" component="h1" gutterBottom>
-            {APP_CONFIG.name}
-          </Typography>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            Version {APP_CONFIG.version}
-          </Typography>
-          
-          {/* API Connection Test */}
-          <TestAPI />
-        </Box>
-      </Container>
+      
+      {/* Main Application */}
+      <CandidateDashboard />
       
       {/* Toast Notifications */}
       {APP_CONFIG.enableToastNotifications && (
         <ToastContainer
           position="top-right"
-          autoClose={5000}
+          autoClose={4000}
           hideProgressBar={false}
-          newestOnTop={false}
+          newestOnTop={true}
           closeOnClick
           rtl={false}
           pauseOnFocusLoss
           draggable
           pauseOnHover
+          theme="light"
         />
       )}
     </ThemeProvider>
