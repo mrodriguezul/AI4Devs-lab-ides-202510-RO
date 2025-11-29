@@ -16,12 +16,16 @@
         "docker:up": "docker compose up --build -d",
         "docker:down": "docker compose down",
         "docker:logs": "docker compose logs -f backend"
+        ,
+        "seed:local": "cp .env.local .env && ts-node src/seeds/candidateSeeder.ts",
+        "seed:docker": "cp .env.docker .env && ts-node src/seeds/candidateSeeder.ts"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "dependencies": {
         "@prisma/client": "^5.13.0",
+        "@faker-js/faker": "^8.0.2",
         "@types/cors": "^2.8.19",
         "@types/multer": "^2.0.0",
         "@types/pg": "^8.15.6",
