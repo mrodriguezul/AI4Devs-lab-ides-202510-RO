@@ -76,35 +76,30 @@ export const candidateService = {
   },
 
   // Create new candidate
-  async createCandidate(
-    candidateData: CreateCandidateRequest,
-    cvFile?: File
-  ): Promise<ApiResponse<Candidate>> {
-    const formData = new FormData();
-    
-    // Add candidate data
-    formData.append('candidateData', JSON.stringify(candidateData));
-    
-    // Add CV file if provided
-    if (cvFile) {
-      formData.append('cv', cvFile);
-    }
-
-    const response = await api.post<ApiResponse<Candidate>>(
-      API_ENDPOINTS.candidates,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+  async createCandidate(formData: FormData): Promise<ApiResponse<Candidate>> {
+    try {
+      const response = await api.post<ApiResponse<Candidate>>(
+        API_ENDPOINTS.candidates,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          timeout: 30000, // 30 seconds timeout
+          // Disable any interceptors that might conflict with MetaMask
+          transformRequest: [(data) => data], // Pass FormData as-is
+        }
+      );
+      
+      return response.data;
+    } catch (error: any) {
+      // Check if this is a MetaMask related error and provide better error handling
+      if (error.message?.includes('MetaMask') || error.message?.includes('ethereum')) {
+        console.warn('MetaMask interference detected in API call');
+        throw new Error('Browser extension interference detected. Please try disabling wallet extensions or use incognito mode.');
       }
-    );
-    
-    if (APP_CONFIG.enableToastNotifications && response.data.success) {
-      toast.success('Candidate created successfully!');
+      throw error;
     }
-    
-    return response.data;
   },
 
   // Update candidate

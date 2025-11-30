@@ -41,12 +41,14 @@ export const educationValidation: ValidationChain[] = [
     .isArray({ min: 0 })
     .withMessage('Education must be an array'),
     body('education.*.degree')
+    .if(body('education').isArray({ min: 1 }))
     .trim()
     .notEmpty()
     .withMessage('Degree is required')
     .isLength({ min: 2, max: 100 })
     .withMessage('Degree must be between 2 and 100 characters'),
     body('education.*.institution')
+    .if(body('education').isArray({ min: 1 }))
     .trim()
     .notEmpty()
     .withMessage('Institution is required')
@@ -64,29 +66,41 @@ export const workExperienceValidation: ValidationChain[] = [
     .isArray({ min: 0 })
     .withMessage('Work experience must be an array'),
     body('workExperience.*.company')
+    .if(body('workExperience').isArray({ min: 1 }))
     .trim()
     .notEmpty()
     .withMessage('Company name is required')
     .isLength({ min: 2, max: 100 })
     .withMessage('Company name must be between 2 and 100 characters'),
     body('workExperience.*.position')
+    .if(body('workExperience').isArray({ min: 1 }))
     .trim()
     .notEmpty()
     .withMessage('Position is required')
     .isLength({ min: 2, max: 100 })
     .withMessage('Position must be between 2 and 100 characters'),
     body('workExperience.*.startDate')
+    .if(body('workExperience').isArray({ min: 1 }))
     .notEmpty()
     .withMessage('Start date is required')
     .isISO8601()
     .withMessage('Please provide a valid start date (YYYY-MM-DD)'),
     body('workExperience.*.endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('Please provide a valid end date (YYYY-MM-DD)')
+    .optional({ nullable: true })
     .custom((endDate, { req }) => {
-        if (endDate && req.body.startDate) {
-            const start = new Date(req.body.startDate);
+        if (endDate === null || endDate === undefined || endDate === '') {
+            return true; // Allow null, undefined, or empty string
+        }
+        
+        // Validate date format if value is provided
+        if (!Date.parse(endDate)) {
+            throw new Error('Please provide a valid end date (YYYY-MM-DD)');
+        }
+        
+        // Check if end date is after start date
+        const workExpIndex = req.body.workExperience?.findIndex((exp: any) => exp.endDate === endDate);
+        if (workExpIndex !== -1 && req.body.workExperience[workExpIndex].startDate) {
+            const start = new Date(req.body.workExperience[workExpIndex].startDate);
             const end = new Date(endDate);
             if (end <= start) {
                 throw new Error('End date must be after start date');

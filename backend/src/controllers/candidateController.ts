@@ -75,8 +75,8 @@ export class CandidateController {
         email: req.body.email,
         phone: req.body.phone,
         address: req.body.address,
-        education: req.body.education ? JSON.parse(req.body.education) : [],
-        workExperience: req.body.workExperience ? JSON.parse(req.body.workExperience) : []
+        education: req.body.education || [],
+        workExperience: req.body.workExperience || []
       };
 
       let cvFilePath: string | undefined;

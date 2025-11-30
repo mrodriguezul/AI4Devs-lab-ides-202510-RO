@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { CandidateController } from '../controllers/candidateController';
 import { createCandidateValidation } from '../validators/candidateValidator';
 import { upload } from '../config/multer';
+import { parseFormDataFields } from '../middleware/parseFormData';
 
 const router = Router();
 const candidateController = new CandidateController();
@@ -34,6 +35,7 @@ router.get('/:id', candidateController.getCandidateById);
 router.post(
   '/',
   upload.single('cv'), // Handle CV file upload
+  parseFormDataFields, // Parse JSON strings in FormData
   createCandidateValidation, // Validate request data
   candidateController.createCandidate
 );

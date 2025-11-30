@@ -39,10 +39,12 @@ export const errorResponse = (
 export const validationErrorResponse = (
   errors: any[]
 ): ApiResponse => {
+  const errorMessages = errors.map(err => `${err.path || err.param}: ${err.msg}`).join(', ');
+  
   return {
     success: false,
     error: 'Validation failed',
-    message: 'Please check the provided data',
+    message: `Please fix the following errors: ${errorMessages}`,
     data: errors
   };
 };

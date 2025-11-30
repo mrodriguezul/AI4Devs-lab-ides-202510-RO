@@ -31,6 +31,7 @@ import {
 import { candidateService } from '../services/api';
 import { Candidate } from '../types/api';
 import { toast } from 'react-toastify';
+import AddCandidateForm from './AddCandidateForm';
 
 const CANDIDATES_PER_PAGE = 6;
 
@@ -42,6 +43,7 @@ const CandidateDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCandidates, setTotalCandidates] = useState(0);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'add-candidate'>('dashboard');
 
   const fetchCandidates = async (page: number = 1, search: string = '') => {
     try {
@@ -95,12 +97,32 @@ const CandidateDashboard: React.FC = () => {
   };
 
   const handleAddCandidate = () => {
-    toast.info('Add Candidate form will be implemented in the next task');
+    setCurrentView('add-candidate');
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+  };
+
+  const handleCandidateCreated = () => {
+    setCurrentView('dashboard');
+    // Refresh candidates list
+    fetchCandidates(1, searchTerm);
   };
 
   const handleViewCandidate = (candidateId: number) => {
     toast.info(`Viewing candidate ${candidateId} - Full view to be implemented`);
   };
+
+  // Show Add Candidate Form
+  if (currentView === 'add-candidate') {
+    return (
+      <AddCandidateForm 
+        onBack={handleBackToDashboard}
+        onSuccess={handleCandidateCreated}
+      />
+    );
+  }
 
   if (loading && candidates.length === 0) {
     return (
