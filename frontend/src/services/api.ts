@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios, { AxiosResponse, AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { 
   API_ENDPOINTS, 
@@ -8,6 +8,116 @@ import {
   ApiResponse, 
   PaginatedResponse
 } from '../types/api';
+
+// Error handling types and configuration
+interface ApiErrorResponse {
+  success: false;
+  message: string;
+  error?: string;
+  errors?: Array<{ path: string; msg: string }>;
+}
+
+interface RetryConfig {
+  retries: number;
+  retryDelay: number;
+  retryCondition: (error: AxiosError) => boolean;
+}
+
+const RETRY_CONFIG: RetryConfig = {
+  retries: 3,
+  retryDelay: 1000, // 1 second
+  retryCondition: (error: AxiosError) => {
+    // Retry on network errors or 5xx status codes
+    return !error.response || (error.response.status >= 500 && error.response.status < 600);
+  }
+};
+
+// Error categorization
+const categorizeError = (error: AxiosError): { type: string; message: string; isRetryable: boolean } => {
+  if (!error.response) {
+    return {
+      type: 'NETWORK_ERROR',
+      message: 'Unable to connect to the server. Please check your internet connection.',
+      isRetryable: true
+    };
+  }
+
+  const status = error.response.status;
+  const errorData = error.response.data as ApiErrorResponse;
+
+  switch (status) {
+    case 400:
+      return {
+        type: 'VALIDATION_ERROR',
+        message: errorData.message || 'Please check your input and try again.',
+        isRetryable: false
+      };
+    case 401:
+      return {
+        type: 'AUTHENTICATION_ERROR',
+        message: 'Authentication required. Please log in.',
+        isRetryable: false
+      };
+    case 403:
+      return {
+        type: 'PERMISSION_ERROR',
+        message: 'You do not have permission to perform this action.',
+        isRetryable: false
+      };
+    case 404:
+      return {
+        type: 'NOT_FOUND_ERROR',
+        message: 'The requested resource was not found.',
+        isRetryable: false
+      };
+    case 429:
+      return {
+        type: 'RATE_LIMIT_ERROR',
+        message: 'Too many requests. Please wait a moment and try again.',
+        isRetryable: true
+      };
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return {
+        type: 'SERVER_ERROR',
+        message: 'Server error occurred. We\'re working to fix this issue.',
+        isRetryable: true
+      };
+    default:
+      return {
+        type: 'UNKNOWN_ERROR',
+        message: errorData.message || 'An unexpected error occurred.',
+        isRetryable: false
+      };
+  }
+};
+
+// Retry logic implementation
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const axiosRetry = async <T>(operation: () => Promise<T>, config: RetryConfig): Promise<T> => {
+  let lastError: AxiosError;
+  
+  for (let attempt = 0; attempt <= config.retries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as AxiosError;
+      
+      if (attempt === config.retries || !config.retryCondition(lastError)) {
+        throw lastError;
+      }
+      
+      const delay = config.retryDelay * Math.pow(2, attempt); // Exponential backoff
+      console.warn(`API request failed, retrying in ${delay}ms... (attempt ${attempt + 1}/${config.retries})`);
+      await sleep(delay);
+    }
+  }
+  
+  throw lastError!;
+};
 
 // Configure axios instance
 const api = axios.create({
@@ -32,7 +142,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for enhanced error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => {
     if (APP_CONFIG.enableDebug) {
@@ -40,13 +150,31 @@ api.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
-    console.error('❌ API Response Error:', error);
+  (error: AxiosError) => {
+    const errorInfo = categorizeError(error);
     
+    console.error('❌ API Error:', {
+      type: errorInfo.type,
+      message: errorInfo.message,
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      isRetryable: errorInfo.isRetryable
+    });
+    
+    // Show user-friendly error notification
     if (APP_CONFIG.enableToastNotifications) {
-      const errorMessage = error.response?.data?.message || error.message || 'An error occurred';
-      toast.error(`API Error: ${errorMessage}`);
+      // Don't show toast for validation errors as they should be handled in forms
+      if (errorInfo.type !== 'VALIDATION_ERROR') {
+        toast.error(errorInfo.message, {
+          toastId: `${errorInfo.type}_${error.config?.url}`, // Prevent duplicate toasts
+          autoClose: errorInfo.type === 'NETWORK_ERROR' ? 5000 : 3000
+        });
+      }
     }
+    
+    // Add error metadata to the error object
+    (error as any).errorInfo = errorInfo;
     
     return Promise.reject(error);
   }
@@ -60,24 +188,29 @@ export const candidateService = {
     limit?: number;
     search?: string;
   }): Promise<PaginatedResponse<Candidate>> {
-    const response = await api.get<PaginatedResponse<Candidate>>(
-      API_ENDPOINTS.candidates,
-      { params }
-    );
-    return response.data;
+    return axiosRetry(async () => {
+      const response = await api.get<PaginatedResponse<Candidate>>(
+        API_ENDPOINTS.candidates,
+        { params }
+      );
+      return response.data;
+    }, RETRY_CONFIG);
   },
 
   // Get candidate by ID
   async getCandidateById(id: number): Promise<ApiResponse<Candidate>> {
-    const response = await api.get<ApiResponse<Candidate>>(
-      API_ENDPOINTS.candidateById(id)
-    );
-    return response.data;
+    return axiosRetry(async () => {
+      const response = await api.get<ApiResponse<Candidate>>(
+        API_ENDPOINTS.candidateById(id)
+      );
+      return response.data;
+    }, RETRY_CONFIG);
   },
 
   // Create new candidate
   async createCandidate(formData: FormData): Promise<ApiResponse<Candidate>> {
     try {
+      // Don't retry file uploads automatically as they may be large
       const response = await api.post<ApiResponse<Candidate>>(
         API_ENDPOINTS.candidates,
         formData,
@@ -85,19 +218,48 @@ export const candidateService = {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
-          timeout: 30000, // 30 seconds timeout
-          // Disable any interceptors that might conflict with MetaMask
+          timeout: 60000, // 60 seconds for file uploads
           transformRequest: [(data) => data], // Pass FormData as-is
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              console.log(`Upload progress: ${percentCompleted}%`);
+            }
+          }
         }
       );
       
+      // Show success notification
+      if (APP_CONFIG.enableToastNotifications) {
+        toast.success('Candidate created successfully!', {
+          autoClose: 3000
+        });
+      }
+      
       return response.data;
     } catch (error: any) {
-      // Check if this is a MetaMask related error and provide better error handling
+      // Handle specific error cases
       if (error.message?.includes('MetaMask') || error.message?.includes('ethereum')) {
-        console.warn('MetaMask interference detected in API call');
-        throw new Error('Browser extension interference detected. Please try disabling wallet extensions or use incognito mode.');
+        const browserError = new Error('Browser extension interference detected. Please try disabling wallet extensions or use incognito mode.');
+        (browserError as any).errorInfo = {
+          type: 'BROWSER_EXTENSION_ERROR',
+          message: 'Browser extension interference',
+          isRetryable: false
+        };
+        throw browserError;
       }
+      
+      // Re-throw with additional context for file upload errors
+      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+        const timeoutError = new Error('File upload timed out. Please try again with a smaller file.');
+        (timeoutError as any).errorInfo = {
+          type: 'UPLOAD_TIMEOUT_ERROR',
+          message: 'Upload timed out',
+          isRetryable: true
+        };
+        throw timeoutError;
+      }
+      
       throw error;
     }
   },

@@ -11,7 +11,6 @@ import {
   Step,
   StepLabel,
   Alert,
-  CircularProgress,
   IconButton,
   Paper,
   Chip,
@@ -32,6 +31,17 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { toast } from 'react-toastify';
 import { candidateService } from '../services/api';
+import { 
+  notifications, 
+  notifyFormSuccess, 
+  notifyFormError, 
+  notifyValidationError,
+  notifyUploadStart,
+  notifyUploadSuccess,
+  notifyUploadError,
+  dismissLoading
+} from '../utils/notifications';
+import { LoadingButton, UploadProgress } from './Loading';
 
 // Types for form data
 interface EducationEntry {
@@ -70,6 +80,7 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploadStatus, setUploadStatus] = useState<{ [key: string]: 'uploading' | 'success' | 'error' | 'pending' }>({});
 
   const [formData, setFormData] = useState<CandidateFormData>({
     firstName: '',
@@ -294,6 +305,25 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
     setErrors({});
 
     try {
+      // Show loading notification
+      notifications.loading('Creating candidate profile...');
+
+      // Client-side validation
+      const validationErrors: Record<string, string> = {};
+      
+      if (!formData.firstName.trim()) validationErrors.firstName = 'First name is required';
+      if (!formData.lastName.trim()) validationErrors.lastName = 'Last name is required';
+      if (!formData.email.trim()) validationErrors.email = 'Email is required';
+      else if (!/\S+@\S+\.\S+/.test(formData.email)) validationErrors.email = 'Invalid email format';
+      if (!formData.phone.trim()) validationErrors.phone = 'Phone number is required';
+
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        dismissLoading();
+        notifyValidationError('Please fill in all required fields');
+        return;
+      }
+
       // Filter out empty education entries
       const validEducation = formData.education.filter(edu => 
         edu.degree.trim() || edu.institution.trim() || edu.graduationYear
@@ -327,6 +357,8 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
       }
 
       if (formData.cvFile) {
+        notifyUploadStart(formData.cvFile.name);
+        setUploadStatus({ [formData.cvFile.name]: 'uploading' });
         submitData.append('cv', formData.cvFile);
       }
 
@@ -334,15 +366,30 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
       await new Promise(resolve => setTimeout(resolve, 100));
       
       await candidateService.createCandidate(submitData);
-      toast.success('Candidate created successfully!');
+      
+      // Success notifications
+      dismissLoading();
+      if (formData.cvFile) {
+        setUploadStatus({ [formData.cvFile.name]: 'success' });
+        notifyUploadSuccess(formData.cvFile.name);
+      }
+      notifyFormSuccess('Candidate profile created');
       onSuccess();
+
     } catch (error: any) {
       console.error('Error creating candidate:', error);
+      dismissLoading();
+      
+      // Handle file upload errors
+      if (formData.cvFile) {
+        setUploadStatus({ [formData.cvFile.name]: 'error' });
+        notifyUploadError(formData.cvFile.name, error.message || 'Upload failed');
+      }
       
       // Check if this is a MetaMask related error
       if (error.message?.includes('MetaMask') || error.message?.includes('ethereum')) {
         console.warn('MetaMask interference detected. This is likely a browser extension conflict.');
-        toast.error('Browser extension conflict detected. Please try disabling MetaMask temporarily or use a different browser.');
+        notifications.warning('Browser extension conflict detected. Please try disabling MetaMask temporarily or use a different browser.');
         return;
       }
       
@@ -353,9 +400,9 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
           backendErrors[err.path || err.param || 'general'] = err.msg || err.message;
         });
         setErrors(backendErrors);
-        toast.error('Please fix the validation errors');
+        notifyValidationError('Please fix the validation errors');
       } else {
-        toast.error(error.response?.data?.message || 'Failed to create candidate');
+        notifyFormError(error.response?.data?.message || 'Failed to create candidate');
       }
     } finally {
       setLoading(false);
@@ -637,12 +684,20 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
               
               {formData.cvFile && (
                 <Box sx={{ mt: 2 }}>
-                  <Chip
-                    label={formData.cvFile.name}
-                    onDelete={() => setFormData(prev => ({ ...prev, cvFile: null }))}
-                    color="primary"
-                    variant="outlined"
-                  />
+                  {uploadStatus[formData.cvFile.name] ? (
+                    <UploadProgress
+                      progress={75}
+                      fileName={formData.cvFile.name}
+                      status={uploadStatus[formData.cvFile.name]}
+                    />
+                  ) : (
+                    <Chip
+                      label={formData.cvFile.name}
+                      onDelete={() => setFormData(prev => ({ ...prev, cvFile: null }))}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
                 </Box>
               )}
               
@@ -705,24 +760,24 @@ const AddCandidateForm: React.FC<AddCandidateFormProps> = ({ onBack, onSuccess }
           </Button>
           
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {loading && <CircularProgress size={20} />}
             {activeStep === steps.length - 1 ? (
-              <Button
+              <LoadingButton
+                loading={loading}
                 variant="contained"
+                color="primary"
                 onClick={handleSubmit}
-                disabled={loading}
-                size="large"
               >
-                {loading ? 'Creating...' : 'Create Candidate'}
-              </Button>
+                Create Candidate
+              </LoadingButton>
             ) : (
-              <Button
+              <LoadingButton
+                loading={loading}
                 variant="contained"
+                color="primary"
                 onClick={handleNext}
-                disabled={loading}
               >
                 Next
-              </Button>
+              </LoadingButton>
             )}
           </Box>
         </Box>
