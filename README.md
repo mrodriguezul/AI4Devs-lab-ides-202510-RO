@@ -45,23 +45,28 @@ npm install
 cd ../backend
 npm install
 ```
-3. Build the backend server
+3. Copy the environment template located at `backend/env.example` and update
+   it with your local paths if needed:
+```
+cp backend/env.example backend/.env
+```
+4. Build the backend server
 ```
 cd backend
 npm run build
 ````
-4. Run the backend server
+5. Run the backend server
 ```
 cd backend
 npm run dev 
 ```
 
-5. In a new terminal window, build the frontend server:
+6. In a new terminal window, build the frontend server:
 ```
 cd frontend
 npm run build
 ```
-6. Start the frontend server
+7. Start the frontend server
 ```
 cd frontend
 npm start
@@ -73,26 +78,34 @@ The backend server will be running at http://localhost:3010, and the frontend wi
 
 This project uses Docker to run a PostgreSQL database. Here's how to get it up and running:
 
-Install Docker on your machine if you haven't done so already. You can download it here.
-Navigate to the root directory of the project in your terminal.
-Run the following command to start the Docker container:
-```
-docker-compose up -d
-```
-This will start a PostgreSQL database in a Docker container. The -d flag runs the container in detached mode, meaning it runs in the background.
+Install Docker on your machine if you haven't done so already. Navigate to the
+root directory of the project and run one of the following commands depending on
+what you need to work on:
 
-To access the PostgreSQL database, you can use any PostgreSQL client with the following connection details:
+- Start only PostgreSQL:
+  ```
+  docker compose up -d db
+  ```
+- Start PostgreSQL **and** the backend API (recommended once you're ready to
+  integrate):
+  ```
+  docker compose up -d backend
+  ```
+
+The compose file now also mounts `./storage-data` into the backend container and
+uses the `FILE_STORAGE_PATH` environment variable so uploaded CVs stay on your
+host machine.
+
+Connection details:
  - Host: localhost
  - Port: 5432
- - User: postgres
- - Password: password
- - Database: mydatabase
+ - User: LTIdbUser
+ - Password: D1ymf8wyQEGthFR1E9xhCq
+ - Database: LTIdb
 
-Please replace User, Password, and Database with the actual user, password, and database name specified in your .env file.
-
-To stop the Docker container, run the following command:
+To stop the Docker containers, run:
 ```
-docker-compose down
+docker compose down
 ```
 # ES
 # LTI - Sistema de Seguimiento de Talento
@@ -141,23 +154,28 @@ npm install
 cd ../backend
 npm install
 ```
-3. Construye el servidor backend:
+3. Copia el archivo `backend/env.example` a `backend/.env` y adapta las rutas a
+   tu entorno en caso de ser necesario:
+```
+cp backend/env.example backend/.env
+```
+4. Construye el servidor backend:
 ```
 cd backend
 npm run build
 ````
-4. Inicia el servidor backend:
+5. Inicia el servidor backend:
 ```
 cd backend
 npm run dev 
 ```
 
-5. En una nueva ventana de terminal, construye el servidor frontend:
+6. En una nueva ventana de terminal, construye el servidor frontend:
 ```
 cd frontend
 npm run build
 ```
-6. Inicia el servidor frontend:
+7. Inicia el servidor frontend:
 ```
 cd frontend
 npm start
@@ -169,24 +187,30 @@ El servidor backend estará corriendo en http://localhost:3010 y el frontend est
 
 Este proyecto usa Docker para ejecutar una base de datos PostgreSQL. Así es cómo ponerlo en marcha:
 
-Instala Docker en tu máquina si aún no lo has hecho. Puedes descargarlo desde aquí.
-Navega al directorio raíz del proyecto en tu terminal.
-Ejecuta el siguiente comando para iniciar el contenedor Docker:
-```
-docker-compose up -d
-```
-Esto iniciará una base de datos PostgreSQL en un contenedor Docker. La bandera -d corre el contenedor en modo separado, lo que significa que se ejecuta en segundo plano.
+Instala Docker en tu máquina si aún no lo has hecho. Desde la raíz del proyecto
+puedes usar:
 
-Para acceder a la base de datos PostgreSQL, puedes usar cualquier cliente PostgreSQL con los siguientes detalles de conexión:
+- Solo PostgreSQL:
+  ```
+  docker compose up -d db
+  ```
+- PostgreSQL + backend (ideal para pruebas end-to-end):
+  ```
+  docker compose up -d backend
+  ```
+
+El archivo compose monta `./storage-data` dentro del contenedor del backend y
+utiliza la variable `FILE_STORAGE_PATH`, por lo que los CV quedan guardados en
+tu máquina anfitriona.
+
+Credenciales de conexión:
  - Host: localhost
- - Port: 5432
- - User: postgres
- - Password: password
- - Database: mydatabase
+ - Puerto: 5432
+ - Usuario: LTIdbUser
+ - Contraseña: D1ymf8wyQEGthFR1E9xhCq
+ - Base de datos: LTIdb
 
-Por favor, reemplaza User, Password y Database con el usuario, la contraseña y el nombre de la base de datos reales especificados en tu archivo .env.
-
-Para detener el contenedor Docker, ejecuta el siguiente comando:
+Para detener los contenedores:
 ```
-docker-compose down
+docker compose down
 ```

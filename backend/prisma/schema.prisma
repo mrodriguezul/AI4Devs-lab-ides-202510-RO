@@ -6,6 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -17,4 +18,54 @@ model User {
   id    Int     @id @default(autoincrement())
   email String  @unique
   name  String?
+}
+
+model Candidate {
+  id          Int      @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  email       String   @unique
+  phone       String?
+  address     String?
+  cvFilePath  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relationships
+  education     Education[]
+  workExperience WorkExperience[]
+  
+  @@map("candidates")
+}
+
+model Education {
+  id           Int       @id @default(autoincrement())
+  degree       String
+  institution  String
+  graduationYear Int?
+  candidateId  Int
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  // Relationships
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  @@map("education")
+}
+
+model WorkExperience {
+  id          Int       @id @default(autoincrement())
+  company     String
+  position    String
+  startDate   DateTime
+  endDate     DateTime?
+  description String?   @db.Text
+  candidateId Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relationships
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  
+  @@map("work_experience")
 }
