@@ -79,8 +79,5 @@ start the app to test all te API Urls.
 
 ## USER PROMPT 7
 
-## USER PROMPT 8
-
-## USER PROMPT 9
-
-## USER PROMPT 10
+Review the project status and continue with the planned tasks. After you complete one, let me know to have a look and provide feed back or ask about something related to the activity.
+Wait until my confirmation to continue to the next task.
